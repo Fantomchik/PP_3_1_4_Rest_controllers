@@ -30,13 +30,16 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/admin/**").hasAnyAuthority("ROLE_ADMIN")
                 .antMatchers("/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                 .antMatchers("/", "/login").permitAll()
+                .antMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
                 .and()
                 .formLogin().successHandler(successUserHandler)
                 .permitAll()
                 .and()
                 .logout()
-                .permitAll();
+                .permitAll()
+                .and()
+                .csrf().disable(); // Для упрощения работы с REST API
     }
 
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {

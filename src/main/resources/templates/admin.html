@@ -6,81 +6,16 @@
   <title>Admin Panel</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    .navbar-text {
-      margin-right: 15px;
-      color: white;
-    }
-    .nav-tabs .nav-link.active {
-      font-weight: bold;
-      border-bottom: 3px solid #0d6efd;
-    }
-    .nav-tabs .nav-link {
-      border: none;
-      color: #495057;
-    }
-    .table-container {
-      margin-top: 20px;
-    }
-    .btn-sm {
-      padding: 0.25rem 0.5rem;
-      font-size: 0.875rem;
-    }
-    /* Модальные окна */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0,0,0,0.5);
-      z-index: 1040;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 5px;
-      width: 500px;
-      max-width: 90%;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
-    }
-    .modal-header {
-      border-bottom: 1px solid #dee2e6;
-      padding-bottom: 15px;
-      margin-bottom: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .modal-footer {
-      border-top: 1px solid #dee2e6;
-      padding-top: 15px;
-      margin-top: 15px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-    .user-info p {
-      margin-bottom: 8px;
-    }
-    .btn-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
+    /* Ваши существующие стили */
   </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
   <div class="container-fluid">
-        <span class="navbar-text">
-            <span th:text="${authUser.email}"></span>
-            (<span th:text="${#strings.listJoin(authUser.roles.![#strings.replace(name, 'ROLE_', '')], ', ')}"></span>)
-        </span>
-    <form th:action="@{/logout}" method="post">
+    <span class="navbar-text" id="user-info">
+      <!-- Будет заполнено через JS -->
+    </span>
+    <form id="logout-form">
       <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
     </form>
   </div>
@@ -89,14 +24,14 @@
 <div class="container mt-4">
   <ul class="nav nav-tabs">
     <li class="nav-item">
-      <a class="nav-link active" href="/admin">Users Table</a>
+      <a class="nav-link active" href="#" id="users-tab">Users Table</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="/admin/new">New User</a>
+      <a class="nav-link" href="#" id="new-user-tab">New User</a>
     </li>
   </ul>
 
-  <div class="table-responsive mt-3">
+  <div id="users-table-container" class="table-responsive mt-3">
     <table class="table table-striped table-hover">
       <thead class="table-dark">
       <tr>
@@ -108,63 +43,74 @@
         <th>Delete</th>
       </tr>
       </thead>
-      <tbody>
-      <tr th:each="user : ${users}">
-        <td th:text="${user.id}"></td>
-        <td th:text="${user.userName}"></td>
-        <td th:text="${user.email}"></td>
-        <td th:text="${#strings.listJoin(user.roles.![#strings.replace(name, 'ROLE_', '')], ', ')}"></td>
-        <td>
-          <a th:href="@{'/admin?editId=' + ${user.id}}" class="btn btn-warning btn-sm">Edit</a>
-        </td>
-        <td>
-          <a th:href="@{'/admin?deleteId=' + ${user.id}}" class="btn btn-danger btn-sm">Delete</a>
-        </td>
-      </tr>
+      <tbody id="users-table-body">
+      <!-- Будет заполнено через JS -->
       </tbody>
     </table>
+  </div>
+
+  <div id="new-user-form-container" class="form-container mt-3" style="display: none;">
+    <h2>Add New User</h2>
+    <form id="new-user-form">
+      <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" class="form-control" id="username" required>
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Roles</label>
+        <div class="role-selector" id="new-user-roles">
+          <!-- Будет заполнено через JS -->
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn btn-secondary" id="cancel-new-user">Cancel</button>
+    </form>
   </div>
 </div>
 
 <!-- Модальное окно редактирования -->
-<div th:if="${editUser != null}" class="modal-overlay">
+<div id="edit-modal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
     <div class="modal-header">
       <h5 class="modal-title">Edit User</h5>
-      <a href="/admin" class="btn-close" aria-label="Close">&times;</a>
+      <button type="button" class="btn-close" id="close-edit-modal">&times;</button>
     </div>
-    <form th:action="@{/admin/update}" th:object="${editUser}" method="post">
+    <form id="edit-user-form">
       <div class="modal-body">
-        <input type="hidden" th:field="*{id}">
+        <input type="hidden" id="edit-user-id">
 
         <div class="mb-3">
-          <label for="editUsername" class="form-label">Username</label>
-          <input type="text" class="form-control" id="editUsername" th:field="*{userName}" required>
+          <label for="edit-username" class="form-label">Username</label>
+          <input type="text" class="form-control" id="edit-username" required>
         </div>
 
         <div class="mb-3">
-          <label for="editEmail" class="form-label">Email</label>
-          <input type="email" class="form-control" id="editEmail" th:field="*{email}" required>
+          <label for="edit-email" class="form-label">Email</label>
+          <input type="email" class="form-control" id="edit-email" required>
         </div>
 
         <div class="mb-3">
-          <label for="editPassword" class="form-label">Password (leave empty to keep current)</label>
-          <input type="password" class="form-control" id="editPassword" th:field="*{password}">
+          <label for="edit-password" class="form-label">Password (leave empty to keep current)</label>
+          <input type="password" class="form-control" id="edit-password">
         </div>
 
         <div class="mb-3">
           <label class="form-label">Roles</label>
-          <div th:each="role : ${allRoles}" class="form-check">
-            <input class="form-check-input" type="checkbox"
-                   th:id="${'role_' + role.id}"
-                   th:value="${role.id}" th:field="*{roles}">
-            <label class="form-check-label" th:for="${'role_' + role.id}"
-                   th:text="${#strings.replace(role.name, 'ROLE_', '')}"></label>
+          <div id="edit-user-roles">
+            <!-- Будет заполнено через JS -->
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <a href="/admin" class="btn btn-secondary">Cancel</a>
+        <button type="button" class="btn btn-secondary" id="cancel-edit-user">Cancel</button>
         <button type="submit" class="btn btn-primary">Save Changes</button>
       </div>
     </form>
@@ -172,30 +118,360 @@
 </div>
 
 <!-- Модальное окно удаления -->
-<div th:if="${deleteUser != null}" class="modal-overlay">
+<div id="delete-modal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
     <div class="modal-header">
       <h5 class="modal-title">Confirm Deletion</h5>
-      <a href="/admin" class="btn-close" aria-label="Close">&times;</a>
+      <button type="button" class="btn-close" id="close-delete-modal">&times;</button>
     </div>
     <div class="modal-body">
       <p>Are you sure you want to delete this user?</p>
       <div class="user-info">
-        <p><strong>ID:</strong> <span th:text="${deleteUser.id}"></span></p>
-        <p><strong>Username:</strong> <span th:text="${deleteUser.userName}"></span></p>
-        <p><strong>Email:</strong> <span th:text="${deleteUser.email}"></span></p>
-        <p><strong>Roles:</strong> <span th:text="${#strings.listJoin(deleteUser.roles.![#strings.replace(name, 'ROLE_', '')], ', ')}"></span></p>
+        <p><strong>ID:</strong> <span id="delete-user-id"></span></p>
+        <p><strong>Username:</strong> <span id="delete-user-username"></span></p>
+        <p><strong>Email:</strong> <span id="delete-user-email"></span></p>
+        <p><strong>Roles:</strong> <span id="delete-user-roles"></span></p>
       </div>
     </div>
     <div class="modal-footer">
-      <a href="/admin" class="btn btn-secondary">Cancel</a>
-      <form th:action="@{/admin/delete/{id}(id=${deleteUser.id})}" method="post">
-        <button type="submit" class="btn btn-danger">Delete</button>
-      </form>
+      <button type="button" class="btn btn-secondary" id="cancel-delete-user">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirm-delete-user">Delete</button>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Глобальные переменные
+  let currentUser = null;
+  let users = [];
+  let roles = [];
+
+  // Инициализация при загрузке страницы
+  document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentUser();
+    loadRoles();
+    loadUsers();
+    setupEventListeners();
+  });
+
+  // Загрузка текущего пользователя
+  async function loadCurrentUser() {
+    try {
+      const response = await fetch('/api/users/current');
+      if (!response.ok) throw new Error('Failed to load current user');
+
+      currentUser = await response.json();
+      updateUserInfo();
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  }
+
+  // Загрузка ролей
+  async function loadRoles() {
+    try {
+      const response = await fetch('/api/roles');
+      if (!response.ok) throw new Error('Failed to load roles');
+
+      roles = await response.json();
+      renderRoleOptions('new-user-roles');
+    } catch (error) {
+      console.error('Error loading roles:', error);
+    }
+  }
+
+  // Загрузка списка пользователей
+  async function loadUsers() {
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to load users');
+
+      users = await response.json();
+      renderUsersTable();
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  }
+
+  // Обновление информации о текущем пользователе в шапке
+  function updateUserInfo() {
+    if (!currentUser) return;
+
+    const userInfoElement = document.getElementById('user-info');
+    const rolesText = currentUser.roles.map(role => role.name.replace('ROLE_', '')).join(', ');
+
+    userInfoElement.innerHTML = `
+      ${currentUser.email} (${rolesText})
+    `;
+  }
+
+  // Рендер таблицы пользователей
+  function renderUsersTable() {
+    const tbody = document.getElementById('users-table-body');
+    tbody.innerHTML = '';
+
+    users.forEach(user => {
+      const rolesText = user.roles.map(role => role.name.replace('ROLE_', '')).join(', ');
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${user.id}</td>
+        <td>${user.userName}</td>
+        <td>${user.email}</td>
+        <td>${rolesText}</td>
+        <td>
+          <button class="btn btn-warning btn-sm edit-btn" data-id="${user.id}">Edit</button>
+        </td>
+        <td>
+          <button class="btn btn-danger btn-sm delete-btn" data-id="${user.id}">Delete</button>
+        </td>
+      `;
+
+      tbody.appendChild(row);
+    });
+
+    // Добавляем обработчики для кнопок редактирования и удаления
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.dataset.id));
+    });
+  }
+
+  // Рендер опций ролей
+  function renderRoleOptions(containerId, selectedRoles = []) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    roles.forEach(role => {
+      const roleName = role.name.replace('ROLE_', '');
+      const isChecked = selectedRoles.some(r => r.id === role.id);
+
+      const div = document.createElement('div');
+      div.className = 'form-check';
+
+      div.innerHTML = `
+        <input class="form-check-input" type="checkbox"
+               id="role-${containerId}-${role.id}"
+               value="${role.id}"
+               ${isChecked ? 'checked' : ''}>
+        <label class="form-check-label" for="role-${containerId}-${role.id}">
+          ${roleName}
+        </label>
+      `;
+
+      container.appendChild(div);
+    });
+  }
+
+  // Открытие модального окна редактирования
+  function openEditModal(userId) {
+    const user = users.find(u => u.id == userId);
+    if (!user) return;
+
+    document.getElementById('edit-user-id').value = user.id;
+    document.getElementById('edit-username').value = user.userName;
+    document.getElementById('edit-email').value = user.email;
+
+    renderRoleOptions('edit-user-roles', user.roles);
+
+    document.getElementById('edit-modal').style.display = 'flex';
+  }
+
+  // Открытие модального окна удаления
+  function openDeleteModal(userId) {
+    const user = users.find(u => u.id == userId);
+    if (!user) return;
+
+    const rolesText = user.roles.map(role => role.name.replace('ROLE_', '')).join(', ');
+
+    document.getElementById('delete-user-id').textContent = user.id;
+    document.getElementById('delete-user-username').textContent = user.userName;
+    document.getElementById('delete-user-email').textContent = user.email;
+    document.getElementById('delete-user-roles').textContent = rolesText;
+
+    document.getElementById('delete-modal').style.display = 'flex';
+    document.getElementById('confirm-delete-user').dataset.id = user.id;
+  }
+
+  // Настройка обработчиков событий
+  function setupEventListeners() {
+    // Переключение между таблицей и формой
+    document.getElementById('users-tab').addEventListener('click', () => {
+      document.getElementById('users-table-container').style.display = 'block';
+      document.getElementById('new-user-form-container').style.display = 'none';
+    });
+
+    document.getElementById('new-user-tab').addEventListener('click', () => {
+      document.getElementById('users-table-container').style.display = 'none';
+      document.getElementById('new-user-form-container').style.display = 'block';
+    });
+
+    // Форма создания пользователя
+    document.getElementById('new-user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const selectedRoles = Array.from(document.querySelectorAll('#new-user-roles input:checked'))
+              .map(checkbox => roles.find(role => role.id == checkbox.value));
+
+      const newUser = {
+        userName: username,
+        email: email,
+        password: password,
+        roles: selectedRoles
+      };
+
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newUser)
+        });
+
+        if (!response.ok) throw new Error('Failed to create user');
+
+        const createdUser = await response.json();
+        users.push(createdUser);
+        renderUsersTable();
+
+        // Очищаем форму
+        document.getElementById('new-user-form').reset();
+        // Возвращаемся к таблице
+        document.getElementById('users-table-container').style.display = 'block';
+        document.getElementById('new-user-form-container').style.display = 'none';
+
+      } catch (error) {
+        console.error('Error creating user:', error);
+        alert('Failed to create user');
+      }
+    });
+
+    // Отмена создания пользователя
+    document.getElementById('cancel-new-user').addEventListener('click', () => {
+      document.getElementById('new-user-form').reset();
+      document.getElementById('users-table-container').style.display = 'block';
+      document.getElementById('new-user-form-container').style.display = 'none';
+    });
+
+    // Форма редактирования пользователя
+    document.getElementById('edit-user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const userId = document.getElementById('edit-user-id').value;
+      const username = document.getElementById('edit-username').value;
+      const email = document.getElementById('edit-email').value;
+      const password = document.getElementById('edit-password').value;
+
+      const selectedRoles = Array.from(document.querySelectorAll('#edit-user-roles input:checked'))
+              .map(checkbox => roles.find(role => role.id == checkbox.value));
+
+      const updatedUser = {
+        id: userId,
+        userName: username,
+        email: email,
+        password: password || undefined, // Отправляем пароль только если он был изменен
+        roles: selectedRoles
+      };
+
+      try {
+        const response = await fetch('/api/users', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatedUser)
+        });
+
+        if (!response.ok) throw new Error('Failed to update user');
+
+        const user = await response.json();
+        // Обновляем пользователя в списке
+        const index = users.findIndex(u => u.id == user.id);
+        if (index !== -1) {
+          users[index] = user;
+        }
+        renderUsersTable();
+
+        // Закрываем модальное окно
+        document.getElementById('edit-modal').style.display = 'none';
+
+      } catch (error) {
+        console.error('Error updating user:', error);
+        alert('Failed to update user');
+      }
+    });
+
+    // Закрытие модального окна редактирования
+    document.getElementById('close-edit-modal').addEventListener('click', () => {
+      document.getElementById('edit-modal').style.display = 'none';
+    });
+
+    document.getElementById('cancel-edit-user').addEventListener('click', () => {
+      document.getElementById('edit-modal').style.display = 'none';
+    });
+
+    // Удаление пользователя
+    document.getElementById('confirm-delete-user').addEventListener('click', async () => {
+      const userId = document.getElementById('confirm-delete-user').dataset.id;
+
+      try {
+        const response = await fetch(`/api/users/${userId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete user');
+
+        // Удаляем пользователя из списка
+        users = users.filter(u => u.id != userId);
+        renderUsersTable();
+
+        // Закрываем модальное окно
+        document.getElementById('delete-modal').style.display = 'none';
+
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Failed to delete user');
+      }
+    });
+
+    // Закрытие модального окна удаления
+    document.getElementById('close-delete-modal').addEventListener('click', () => {
+      document.getElementById('delete-modal').style.display = 'none';
+    });
+
+    document.getElementById('cancel-delete-user').addEventListener('click', () => {
+      document.getElementById('delete-modal').style.display = 'none';
+    });
+
+    // Выход из системы
+    document.getElementById('logout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const response = await fetch('/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+
+        if (response.redirected) {
+          window.location.href = response.url;
+        }
+      } catch (error) {
+        console.error('Error logging out:', error);
+      }
+    });
+  }
+</script>
 </body>
 </html>

@@ -6,40 +6,16 @@
   <title>User Profile | Spring Security</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    .navbar-text {
-      margin-right: 15px;
-      color: white;
-    }
-    .profile-card {
-      background-color: white;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 25px;
-      margin-top: 20px;
-    }
-    .profile-header {
-      border-bottom: 1px solid #dee2e6;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-    }
-    .info-label {
-      font-weight: 500;
-      color: #6c757d;
-    }
-    .info-value {
-      font-weight: 400;
-      color: #212529;
-    }
+    /* Ваши существующие стили */
   </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
   <div class="container-fluid">
-        <span class="navbar-text">
-            <span th:text="${user.email}"></span>
-            (<span th:text="${#strings.listJoin(user.roles.![#strings.replace(name, 'ROLE_', '')], ', ')}"></span>)
-        </span>
-    <form th:action="@{/logout}" method="post">
+    <span class="navbar-text" id="user-info">
+      <!-- Будет заполнено через JS -->
+    </span>
+    <form id="logout-form">
       <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
     </form>
   </div>
@@ -57,22 +33,21 @@
           <div class="col-md-6">
             <div class="mb-4">
               <p class="info-label">ID</p>
-              <p class="info-value" th:text="${user.id}"></p>
+              <p class="info-value" id="user-id"></p>
             </div>
             <div class="mb-4">
               <p class="info-label">Username</p>
-              <p class="info-value" th:text="${user.userName}"></p>
+              <p class="info-value" id="user-username"></p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="mb-4">
               <p class="info-label">Email</p>
-              <p class="info-value" th:text="${user.email}"></p>
+              <p class="info-value" id="user-email"></p>
             </div>
             <div class="mb-4">
               <p class="info-label">Roles</p>
-              <p class="info-value"
-                 th:text="${#strings.listJoin(user.roles.![#strings.replace(name, 'ROLE_', '')], ', ')}"></p>
+              <p class="info-value" id="user-roles"></p>
             </div>
           </div>
         </div>
@@ -82,5 +57,58 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentUser();
+    setupLogout();
+  });
+
+  async function loadCurrentUser() {
+    try {
+      const response = await fetch('/api/users/current');
+      if (!response.ok) throw new Error('Failed to load current user');
+
+      const user = await response.json();
+      updateUserInfo(user);
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  }
+
+  function updateUserInfo(user) {
+    if (!user) return;
+
+    // Шапка
+    const rolesText = user.roles.map(role => role.name.replace('ROLE_', '')).join(', ');
+    document.getElementById('user-info').textContent = `${user.email} (${rolesText})`;
+
+    // Профиль
+    document.getElementById('user-id').textContent = user.id;
+    document.getElementById('user-username').textContent = user.userName;
+    document.getElementById('user-email').textContent = user.email;
+    document.getElementById('user-roles').textContent = rolesText;
+  }
+
+  function setupLogout() {
+    document.getElementById('logout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const response = await fetch('/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+
+        if (response.redirected) {
+          window.location.href = response.url;
+        }
+      } catch (error) {
+        console.error('Error logging out:', error);
+      }
+    });
+  }
+</script>
 </body>
 </html>
